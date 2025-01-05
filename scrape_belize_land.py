@@ -40,15 +40,20 @@ def scrape_land_listings():
                     image = listing.query_selector(".listing-item img")
                     
                     # Get the text and clean it up
-                    title_text = (title1.inner_text() if title1 else '') or \
-                                (title2.inner_text() if title2 else '') or \
-                                (title3.inner_text() if title3 else '')
+                    title_text = (title.inner_text() if title else '') or \
+                                (title2.inner_text() if title2 else '')
                     price_text = price.inner_text() if price else ''
                     link_href = link.get_attribute('href') if link else ''
                     desc_text = description.inner_text() if description else ''
                     image_url = image.get_attribute('src') if image else ''
                     
-                    if not any([title_text, price_text, link_href, desc_text]):
+                    # Skip listings without prices
+                    if not price_text:
+                        print("Skipping listing without price")
+                        continue
+                        
+                    if not any([title_text, link_href, desc_text]):
+                        print("Skipping listing with missing required fields")
                         continue
                         
                     listing_data = {
