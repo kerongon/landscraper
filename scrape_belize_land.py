@@ -1,6 +1,7 @@
 from playwright.sync_api import sync_playwright
 import time
 import csv
+import json
 
 def scrape_land_listings():
     with sync_playwright() as p:
@@ -30,26 +31,33 @@ def scrape_land_listings():
                 
             for listing in listings:
                 try:
-                    # Extract data from each listing using correct selectors
-                    title = listing.query_selector("h1") or listing.query_selector(".prop-desc h1")
+                    # Extract data from each listing using multiple selectors
+                    title1 = listing.query_selector("h1")
+                    title2 = listing.query_selector(".prop-title h1")
+                    title3 = listing.query_selector(".prop-desc h1")
                     price = listing.query_selector(".list-price span")
                     link = listing.query_selector(".prop-title a")
                     description = listing.query_selector(".prop-desc")
+                    image = listing.query_selector(".listing-item img")
                     
                     # Get the text and clean it up
-                    title_text = title.inner_text() if title else ''
+                    title_text = (title1.inner_text() if title1 else '') or \
+                                (title2.inner_text() if title2 else '') or \
+                                (title3.inner_text() if title3 else '')
                     price_text = price.inner_text() if price else ''
                     link_href = link.get_attribute('href') if link else ''
                     desc_text = description.inner_text() if description else ''
+                    image_url = image.get_attribute('src') if image else ''
                     
-                    if not any([title_text, price_text, link_href]):
+                    if not any([title_text, price_text, link_href, desc_text]):
                         continue
                         
                     listing_data = {
                         'title': title_text.strip(),
                         'price': price_text.strip(),
                         'description': desc_text.strip(),
-                        'link': link_href.strip()
+                        'link': link_href.strip(),
+                        'image_url': image_url.strip()
                     }
                     
                     print(f"Extracted listing: {listing_data['title']} - {listing_data['price']}")
@@ -69,13 +77,19 @@ def scrape_land_listings():
             
         browser.close()
         
-        # Save to CSV
+        # Save to CSV and JSON
         if all_listings:
+            # Save CSV
             with open('belize_land_listings.csv', 'w', newline='', encoding='utf-8') as f:
-                writer = csv.DictWriter(f, fieldnames=['title', 'price', 'description', 'link'])
+                writer = csv.DictWriter(f, fieldnames=['title', 'price', 'description', 'link', 'image_url'])
                 writer.writeheader()
                 writer.writerows(all_listings)
             print(f"Saved {len(all_listings)} listings to CSV")
+            
+            # Save JSON
+            with open('belize_land_listings.json', 'w', encoding='utf-8') as f:
+                json.dump(all_listings, f, indent=2, ensure_ascii=False)
+            print(f"Saved {len(all_listings)} listings to JSON")
         else:
             print("No listings were collected")
         
