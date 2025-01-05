@@ -6,7 +6,7 @@ def scrape_land_listings():
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
         page = browser.new_page()
-        
+
         # List to store all listings
         all_listings = []
         
