@@ -32,9 +32,8 @@ def scrape_land_listings():
             for listing in listings:
                 try:
                     # Extract data from each listing using multiple selectors
-                    title1 = listing.query_selector("h1")
-                    title2 = listing.query_selector(".prop-title h1")
-                    title3 = listing.query_selector(".prop-desc h1")
+                    title = listing.query_selector(".prop-title h1")
+                    title2 = listing.query_selector(".prop-desc h1")
                     price = listing.query_selector(".list-price span")
                     link = listing.query_selector(".prop-title a")
                     description = listing.query_selector(".prop-desc")
