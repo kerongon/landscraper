@@ -4,7 +4,7 @@ import csv
 
 def scrape_land_listings():
     with sync_playwright() as p:
-        browser = p.chromium.launch(headless=True)
+        browser = p.chromium.launch(headless=False)  # Set to False for debugging
         page = browser.new_page()
 
         # List to store all listings
@@ -14,50 +14,70 @@ def scrape_land_listings():
         current_page = 1
         
         while True:
+            print(f"Scraping page {current_page}")
             url = f"https://belizerealestatesearch.com/land-for-sale-in-belize/page/{current_page}/?view=Grid"
             page.goto(url)
-            time.sleep(2)  # Wait for content to load
+            time.sleep(3)  # Increased wait time
             
-            # Check if we've reached the end of listings
-            if "No properties were found" in page.content():
-                break
-                
             # Get all property listings on current page
-            listings = page.query_selector_all(".property-item")
+            listings = page.query_selector_all(".prop-det")
+            
+            print(f"Found {len(listings)} listings on page {current_page}")
             
             if not listings:
+                print("No listings found on this page, breaking...")
                 break
                 
             for listing in listings:
                 try:
-                    # Extract data from each listing
-                    title = listing.query_selector(".property-title a")
-                    price = listing.query_selector(".price")
-                    lot_size = listing.query_selector(".lot-size")
-                    link = listing.query_selector(".property-title a")
+                    # Extract data from each listing using correct selectors
+                    title = listing.query_selector("h1") or listing.query_selector(".prop-desc h1")
+                    price = listing.query_selector(".list-price span")
+                    link = listing.query_selector(".prop-title a")
+                    description = listing.query_selector(".prop-desc")
                     
+                    # Get the text and clean it up
+                    title_text = title.inner_text() if title else ''
+                    price_text = price.inner_text() if price else ''
+                    link_href = link.get_attribute('href') if link else ''
+                    desc_text = description.inner_text() if description else ''
+                    
+                    if not any([title_text, price_text, link_href]):
+                        continue
+                        
                     listing_data = {
-                        'title': title.inner_text() if title else 'N/A',
-                        'price': price.inner_text().strip() if price else 'N/A',
-                        'lot_size': lot_size.inner_text() if lot_size else 'N/A',
-                        'link': link.get_attribute('href') if link else 'N/A'
+                        'title': title_text.strip(),
+                        'price': price_text.strip(),
+                        'description': desc_text.strip(),
+                        'link': link_href.strip()
                     }
                     
+                    print(f"Extracted listing: {listing_data['title']} - {listing_data['price']}")
                     all_listings.append(listing_data)
                     
                 except Exception as e:
                     print(f"Error scraping listing: {e}")
                     continue
             
+            # Check for next page
+            next_page = page.query_selector(f"a[href*='page/{current_page + 1}']")
+            if not next_page:
+                print("No next page found, breaking...")
+                break
+                
             current_page += 1
             
         browser.close()
         
         # Save to CSV
-        with open('belize_land_listings.csv', 'w', newline='', encoding='utf-8') as f:
-            writer = csv.DictWriter(f, fieldnames=['title', 'price', 'lot_size', 'link'])
-            writer.writeheader()
-            writer.writerows(all_listings)
+        if all_listings:
+            with open('belize_land_listings.csv', 'w', newline='', encoding='utf-8') as f:
+                writer = csv.DictWriter(f, fieldnames=['title', 'price', 'description', 'link'])
+                writer.writeheader()
+                writer.writerows(all_listings)
+            print(f"Saved {len(all_listings)} listings to CSV")
+        else:
+            print("No listings were collected")
         
         return all_listings
 
