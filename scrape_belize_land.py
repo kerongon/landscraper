@@ -37,7 +37,7 @@ def scrape_land_listings():
                     price = listing.query_selector(".list-price span")
                     link = listing.query_selector(".prop-title a")
                     description = listing.query_selector(".prop-desc")
-                    image = listing.query_selector(".prop-img-wrap img")
+                    image = listing.query_selector(".listing-item img")
                     
                     # Get the text and clean it up
                     title_text = (title.inner_text() if title else '') or \
